@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TED Talks · ML Recommender</title>
+  {% load static %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #E62B1E;
+      --dark: #0a0a0a;
+      --ink: #1a1a1a;
+      --paper: #f7f4ef;
+      --muted: #8a8279;
+      --border: #e0dbd3;
+      --card: #ffffff;
+      --gold: #c9a84c;
+      --accent: #FF6B35;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+
+    /* HEADER */
+    header {
+      background: var(--dark); padding: 0 2rem; position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+      border-bottom: 3px solid var(--red);
+    }
+    .logo { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.6rem; color: #fff; letter-spacing: -0.02em; }
+    .logo span { color: var(--red); }
+    .nav-stats { display: flex; gap: 2rem; align-items: center; }
+    .stat-pill { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .stat-pill strong { color: #fff; font-size: 0.85rem; }
+
+    /* HERO */
+    .hero { background: var(--dark); padding: 3rem 2rem 3.5rem; position: relative; overflow: hidden; }
+    .hero-tag { display: inline-block; background: var(--red); color: #fff; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; margin-bottom: 1rem; }
+    .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 1rem; }
+    .hero h1 em { color: var(--red); font-style: italic; }
+    .hero p { color: #999; font-size: 0.95rem; line-height: 1.7; max-width: 520px; margin-bottom: 2rem; }
+    .search-wrap { display: flex; gap: 0; max-width: 520px; }
+    .search-input { flex: 1; background: #1a1a1a; border: 1.5px solid #333; border-right: none; color: #fff; padding: 0.75rem 1.1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    .search-input::placeholder { color: #555; }
+    .search-input:focus { border-color: var(--red); }
+    .search-btn { background: var(--red); color: #fff; border: none; padding: 0 1.4rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+    .search-btn:hover { background: #c0221a; }
+
+    /* MAIN */
+    .main { max-width: 1400px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* SECTION LABEL */
+    .section-label { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+    .section-label h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; }
+    .section-label .line { flex: 1; height: 1px; background: var(--border); }
+    .section-label .count { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+
+    /* CLUSTER PILLS */
+    .cluster-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2.5rem; }
+    .cluster-pill { background: var(--card); border: 1.5px solid var(--border); color: var(--ink); padding: 0.35rem 0.9rem; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.15s; border-radius: 0; }
+    .cluster-pill:hover, .cluster-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .cluster-pill.all-btn { background: var(--red); border-color: var(--red); color: #fff; }
+    .cluster-pill.all-btn:hover { background: #c0221a; }
+
+    /* TALKS GRID */
+    .talks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5px; background: var(--border); border: 1.5px solid var(--border); margin-bottom: 3rem; }
+
+    .talk-card { background: var(--card); padding: 1.5rem; cursor: pointer; transition: background 0.15s; position: relative; border-left: 3px solid transparent; }
+    .talk-card:hover { background: #fdf9f4; border-left-color: var(--red); }
+    .talk-card.selected { background: var(--dark); border-left-color: var(--red); }
+    .talk-card.selected .tc-title, .talk-card.selected .tc-meta, .talk-card.selected .tc-occ { color: #fff; }
+    .talk-card.selected .tc-id, .talk-card.selected .tc-cluster { color: #aaa; }
+
+    .tc-id { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .tc-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.3rem; }
+    .tc-speaker { font-size: 0.78rem; color: var(--red); font-weight: 500; margin-bottom: 0.2rem; }
+    .tc-occ { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.6rem; font-style: italic; }
+    .tc-meta { display: flex; gap: 1rem; font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; flex-wrap: wrap; }
+    .tc-cluster { display: inline-block; background: var(--paper); padding: 2px 8px; font-size: 0.65rem; color: var(--muted); margin-top: 0.6rem; }
+    .tc-event { font-size: 0.65rem; color: var(--muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+    .rec-btn-sm { position: absolute; bottom: 1rem; right: 1rem; background: var(--red); color: #fff; border: none; padding: 4px 10px; font-size: 0.7rem; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    .talk-card:hover .rec-btn-sm { opacity: 1; }
+
+    /* RECOMMENDATION PANEL */
+    #rec-panel { display: none; margin-bottom: 3rem; }
+    #rec-panel.visible { display: block; }
+
+    .rec-header { background: var(--dark); padding: 2rem; display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: start; margin-bottom: 1.5px; }
+    .rh-tag { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); margin-bottom: 0.5rem; }
+    .rh-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: #fff; line-height: 1.2; margin-bottom: 0.3rem; }
+    .rh-speaker { color: #aaa; font-size: 0.85rem; margin-bottom: 0.2rem; }
+    .rh-occ { color: #666; font-size: 0.78rem; font-style: italic; margin-bottom: 0.75rem; }
+    .rh-desc { color: #777; font-size: 0.82rem; line-height: 1.6; max-width: 560px; margin-bottom: 0.75rem; }
+    .rh-url a { color: var(--red); font-size: 0.75rem; text-decoration: none; font-family: 'DM Mono', monospace; }
+    .rh-url a:hover { text-decoration: underline; }
+    .rec-badges { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
+    .badge { background: #1a1a1a; border: 1px solid #333; padding: 0.4rem 0.8rem; }
+    .badge-label { font-size: 0.6rem; color: #666; text-transform: uppercase; letter-spacing: 0.1em; }
+    .badge-value { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #fff; }
+
+    .rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5px; background: var(--border); border: 1.5px solid var(--border); border-top: none; }
+    .rec-card { background: var(--card); padding: 1.5rem; position: relative; }
+    .rec-rank { position: absolute; top: 1rem; right: 1rem; font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--border); line-height: 1; }
+
+    /* SCORE BARS */
+    .score-wrap { margin-top: 1rem; }
+    .score-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 4px; }
+    .score-lbl { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); width: 54px; flex-shrink: 0; }
+    .bar-bg { flex: 1; height: 4px; background: var(--border); overflow: hidden; }
+    .bar-fill { height: 100%; width: 0%; transition: width 0.6s cubic-bezier(0.25,1,0.5,1); }
+    .bar-fill.hybrid { background: var(--red); }
+    .bar-fill.content { background: var(--gold); }
+    .bar-fill.collab { background: var(--accent); }
+    .score-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink); width: 32px; text-align: right; }
+
+    /* MISC */
+    .loading { padding: 3rem; text-align: center; color: var(--muted); font-size: 0.85rem; background: var(--card); border: 1.5px solid var(--border); }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 0.5rem; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--dark); color: #fff; padding: 0.75rem 1.25rem; font-size: 0.82rem; border-left: 3px solid var(--red); opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    #search-results { display: none; margin-bottom: 2rem; }
+    #search-results.visible { display: block; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .tag-chip { background: var(--paper); border: 1px solid var(--border); font-size: 0.6rem; padding: 1px 7px; color: var(--muted); }
+    footer { background: var(--dark); padding: 2rem; text-align: center; color: #555; font-size: 0.75rem; border-top: 3px solid var(--red); font-family: 'DM Mono', monospace; }
+    footer strong { color: var(--red); }
+    @media (max-width: 640px) { .rec-header { grid-template-columns: 1fr; } .nav-stats { display: none; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TED<span>·</span>ML</div>
+  <div class="nav-stats">
+    <div class="stat-pill"><strong>{{ total_talks }}</strong> Talks</div>
+    <div class="stat-pill"><strong>Hybrid</strong> NLP + SVD</div>
+    <div class="stat-pill"><strong>10</strong> Clusters</div>
+    <div class="stat-pill"><strong>Real</strong> Dataset</div>
+  </div>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="hero-tag">Machine Learning · Django · Real TED Dataset</div>
+    <h1>Discover ideas<br><em>curated for you</em></h1>
+    <p>Hybrid recommendation engine powered by TF-IDF + SVD + KMeans — trained on 500 real TED Talks from ted_main.csv</p>
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input" placeholder="Search by topic, speaker, keyword…">
+      <button class="search-btn" onclick="doSearch()">Search</button>
+    </div>
+  </div>
+</section>
+
+<main class="main">
+
+  <div id="search-results">
+    <div class="section-label">
+      <h2>Search Results</h2>
+      <div class="line"></div>
+      <span class="count" id="search-count">0 results</span>
+      <button onclick="clearSearch()" style="background:none;border:1px solid var(--border);padding:3px 10px;font-size:0.72rem;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:8px">✕ Clear</button>
+    </div>
+    <div id="search-grid" class="talks-grid"></div>
+  </div>
+
+  <div id="rec-panel">
+    <div class="section-label">
+      <h2>Recommended For You</h2>
+      <div class="line"></div>
+      <span class="count" id="rec-count">6 picks</span>
+    </div>
+    <div id="rec-content">
+      <div class="loading"><span class="spinner"></span>Generating recommendations…</div>
+    </div>
+  </div>
+
+  <div class="section-label">
+    <h2>Browse All Talks</h2>
+    <div class="line"></div>
+    <span class="count" id="browse-count">{{ total_talks }} talks</span>
+  </div>
+
+  <div class="cluster-bar" id="cluster-bar">
+    <button class="cluster-pill all-btn active" onclick="filterCluster('all', this)">All Topics</button>
+  </div>
+
+  <div class="talks-grid" id="talks-grid"></div>
+
+</main>
+
+<footer>
+  Built with <strong>Django</strong> + <strong>scikit-learn</strong> · Real TED Dataset (ted_main.csv, 2550 talks) · TF-IDF · SVD · KMeans · Cosine Similarity
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const ALL_TALKS  = {{ talks|safe }};
+  const CLUSTERS   = {{ clusters|safe }};
+  let currentFilter = 'all';
+  let selectedId    = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    buildClusterBar();
+    renderTalks(ALL_TALKS, 'talks-grid');
+    document.getElementById('search-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch();
+    });
+  });
+
+  // ── Cluster bar ──
+  function buildClusterBar() {
+    const bar = document.getElementById('cluster-bar');
+    CLUSTERS.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'cluster-pill';
+      btn.textContent = c.cluster_name + ' (' + c.count + ')';
+      btn.onclick = () => filterCluster(c.cluster_name, btn);
+      bar.appendChild(btn);
+    });
+  }
+
+  function filterCluster(name, btn) {
+    currentFilter = name;
+    document.querySelectorAll('.cluster-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = name === 'all' ? ALL_TALKS : ALL_TALKS.filter(t => t.cluster_name === name);
+    renderTalks(filtered, 'talks-grid');
+    document.getElementById('browse-count').textContent = filtered.length + ' talks';
+  }
+
+  // ── Render grid ──
+  function renderTalks(talks, containerId) {
+    const grid = document.getElementById(containerId);
+    grid.innerHTML = '';
+    if (!talks.length) {
+      grid.innerHTML = '<div class="loading">No talks found.</div>';
+      return;
+    }
+    talks.forEach(t => grid.appendChild(buildCard(t)));
+  }
+
+  function buildCard(t) {
+    const card = document.createElement('div');
+    card.className = 'talk-card' + (t.id === selectedId ? ' selected' : '');
+    card.id = 'card-' + t.id;
+
+    // parse tags string to chips
+    let tagsHtml = '';
+    try {
+      const rawTags = t.tags.replace(/'/g, '"');
+      const parsed  = JSON.parse(rawTags);
+      if (Array.isArray(parsed)) {
+        tagsHtml = '<div class="tag-list">' +
+          parsed.slice(0, 4).map(tg => '<span class="tag-chip">' + tg + '</span>').join('') +
+          '</div>';
+      }
+    } catch(e) { tagsHtml = ''; }
+
+    card.innerHTML = `
+      <div class="tc-id">TED · #${String(t.id).padStart(3,'0')} · ${t.event || ''}</div>
+      <div class="tc-title">${t.title}</div>
+      <div class="tc-speaker">${t.speaker}</div>
+      <div class="tc-occ">${t.speaker_occupation || ''}</div>
+      <div class="tc-meta">
+        <span>⏱ ${t.duration}</span>
+        <span>👁 ${fmtV(t.views)}</span>
+      </div>
+      ${tagsHtml}
+      <div class="tc-cluster">${t.cluster_name}</div>
+      <button class="rec-btn-sm" onclick="event.stopPropagation();getRecommendations(${t.id})">Recommend →</button>
+    `;
+    card.addEventListener('click', () => getRecommendations(t.id));
+    return card;
+  }
+
+  function fmtV(v) {
+    if (v >= 1e6) return (v/1e6).toFixed(1) + 'M';
+    if (v >= 1e3) return (v/1e3).toFixed(0) + 'K';
+    return v;
+  }
+
+  // ── Recommendations ──
+  function getRecommendations(talkId) {
+    selectedId = talkId;
+    document.querySelectorAll('.talk-card').forEach(c => c.classList.remove('selected'));
+    const sel = document.getElementById('card-' + talkId);
+    if (sel) sel.classList.add('selected');
+
+    const panel = document.getElementById('rec-panel');
+    panel.classList.add('visible');
+    document.getElementById('rec-content').innerHTML =
+      '<div class="loading"><span class="spinner"></span>Analysing with hybrid ML model…</div>';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    fetch('/recommend/' + talkId + '/')
+      .then(r => r.json())
+      .then(data => renderRecommendations(data))
+      .catch(() => {
+        document.getElementById('rec-content').innerHTML =
+          '<div class="loading">⚠ Failed to load recommendations.</div>';
+      });
+  }
+
+  function renderRecommendations(data) {
+    const t = data.selected_talk;
+    const recs = data.recommendations;
+    document.getElementById('rec-count').textContent = recs.length + ' picks';
+
+    let html = `
+      <div class="rec-header">
+        <div>
+          <div class="rh-tag">Selected Talk · Hybrid Analysis Active · ${t.event || ''}</div>
+          <div class="rh-title">${t.title}</div>
+          <div class="rh-speaker">by ${t.speaker}</div>
+          <div class="rh-occ">${t.speaker_occupation || ''}</div>
+          <div class="rh-desc">${t.description}</div>
+          <div class="rh-url"><a href="${t.url}" target="_blank">Watch on TED.com →</a></div>
+        </div>
+        <div class="rec-badges">
+          <div class="badge"><div class="badge-label">Duration</div><div class="badge-value">${t.duration}</div></div>
+          <div class="badge"><div class="badge-label">Views</div><div class="badge-value">${fmtV(t.views)}</div></div>
+          <div class="badge"><div class="badge-label">Cluster</div><div class="badge-value" style="font-size:0.68rem">${t.cluster_name}</div></div>
+          <div class="badge"><div class="badge-label">Model</div><div class="badge-value" style="font-size:0.68rem">TF-IDF + SVD</div></div>
+        </div>
+      </div>
+      <div class="rec-grid">
+    `;
+
+    recs.forEach((r, i) => {
+      let tagsHtml = '';
+      try {
+        const parsed = JSON.parse(r.tags.replace(/'/g, '"'));
+        if (Array.isArray(parsed)) {
+          tagsHtml = '<div class="tag-list">' +
+            parsed.slice(0, 3).map(tg => '<span class="tag-chip">' + tg + '</span>').join('') +
+            '</div>';
+        }
+      } catch(e) {}
+
+      html += `
+        <div class="rec-card">
+          <div class="rec-rank">${i+1}</div>
+          <div class="tc-id">TED · #${String(r.id).padStart(3,'0')}</div>
+          <div class="tc-title" style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;line-height:1.3;margin-bottom:0.3rem">${r.title}</div>
+          <div class="tc-speaker" style="font-size:0.78rem;color:var(--red);font-weight:500;margin-bottom:0.15rem">${r.speaker}</div>
+          <div class="tc-occ" style="font-size:0.7rem;color:var(--muted);font-style:italic;margin-bottom:0.5rem">${r.speaker_occupation || ''}</div>
+          <div class="tc-meta" style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;display:flex;gap:1rem">
+            <span>⏱ ${r.duration}</span><span>👁 ${fmtV(r.views)}</span>
+          </div>
+          ${tagsHtml}
+          <div class="tc-cluster" style="display:inline-block;background:var(--paper);padding:2px 8px;font-size:0.65rem;color:var(--muted);margin-top:6px">${r.cluster_name}</div>
+          <div class="score-wrap">
+            ${scoreBar('Hybrid', r.hybrid_score, 'hybrid')}
+            ${scoreBar('Content', r.content_score, 'content')}
+            ${scoreBar('Collab', r.collab_score, 'collab')}
+          </div>
+          <div style="margin-top:8px"><a href="${r.url}" target="_blank" style="color:var(--red);font-size:0.7rem;font-family:'DM Mono',monospace;text-decoration:none">Watch on TED.com →</a></div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+    document.getElementById('rec-content').innerHTML = html;
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.width + '%';
+      });
+    });
+  }
+
+  function scoreBar(label, score, type) {
+    const pct = Math.round(score * 100);
+    return `
+      <div class="score-row">
+        <span class="score-lbl">${label}</span>
+        <div class="bar-bg"><div class="bar-fill ${type}" style="width:0%" data-width="${pct}"></div></div>
+        <span class="score-num">${score.toFixed(3)}</span>
+      </div>
+    `;
+  }
+
+  // ── Search ──
+  function doSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) return;
+
+    const sr = document.getElementById('search-results');
+    sr.classList.add('visible');
+    document.getElementById('search-grid').innerHTML =
+      '<div class="loading"><span class="spinner"></span>Searching with TF-IDF…</div>';
+    document.getElementById('search-count').textContent = '…';
+
+    fetch('/search/?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('search-count').textContent = data.results.length + ' results';
+        renderTalks(data.results, 'search-grid');
+        showToast('Found ' + data.results.length + ' talks for "' + q + '"');
+        sr.scrollIntoView({ behavior: 'smooth' });
+      });
+  }
+
+  function clearSearch() {
+    document.getElementById('search-results').classList.remove('visible');
+    document.getElementById('search-input').value = '';
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>
